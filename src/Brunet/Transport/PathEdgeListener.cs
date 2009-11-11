@@ -459,6 +459,8 @@ namespace Brunet.Transport {
    */
   public class PathEdgeListener : EdgeListener {
 
+    public override long BytesSent { get { return _el.BytesSent; } }
+
     readonly string _path;
     readonly EdgeListener _el;
     readonly PathELManager _pem;

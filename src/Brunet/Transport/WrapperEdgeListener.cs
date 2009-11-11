@@ -30,6 +30,7 @@ namespace Brunet.Transport {
   ///<remarks>This could be an abstract class, but it was fully implemented for
   ///testing purposes</summary>
   public class WrapperEdgeListener: EdgeListener {
+    public override long BytesSent { get { return _el.BytesSent; } }
     protected EdgeListener _el;
     protected object _sync;
     protected Dictionary<Edge, WrapperEdge> _edge_to_wrapper_edge;

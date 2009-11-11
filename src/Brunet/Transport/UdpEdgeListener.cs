@@ -23,6 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+//#define DEBUG_BYTES
+
 using Brunet;
 using System;
 using System.IO;
@@ -46,6 +48,9 @@ namespace Brunet.Transport
    */
   public class UdpEdgeListener : EdgeListener, IEdgeSendHandler
   {
+    protected long _bytes = 0;
+    public override long BytesSent { get { return _bytes; } }
+
     protected Object _send_sync = new Object();
     protected byte[] _send_buffer = new byte[8 + Int16.MaxValue];
     /*
@@ -710,14 +715,15 @@ namespace Brunet.Transport
         //[local id 4 bytes][remote id 4 bytes][packet]
         NumberSerializer.WriteInt(sender.ID, _send_buffer, 0);
         NumberSerializer.WriteInt(sender.RemoteID, _send_buffer, 4);
-        int plength = p.CopyTo(_send_buffer, 8);
+        int length = p.CopyTo(_send_buffer, 8) + 8;
         try {
-          _s.SendTo(_send_buffer, 8 + plength, SocketFlags.None, sender.End);
+          _s.SendTo(_send_buffer, length, SocketFlags.None, sender.End);
         }
         catch(Exception x) {
           bool transient = (1 == _running);
           throw new SendException(transient, String.Format("Problem sending on: {0}",sender), x);
         }
+        _bytes += length;
       }
     }
   }

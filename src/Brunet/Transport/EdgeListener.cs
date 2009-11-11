@@ -81,6 +81,8 @@ namespace Brunet.Transport
     {
       get;
     }
+
+    public virtual long BytesSent { get { throw new NotImplementedException(); } }
           /**
            * It is imperative that the ECB be called and not ignored.  Not
            * calling back will leave the system in a stale state as it waits

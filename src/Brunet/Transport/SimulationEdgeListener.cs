@@ -47,6 +47,9 @@ namespace Brunet.Transport
     /// whether or not to use delays, set in the constructor
     protected bool _use_delay;
 
+    protected long _bytes = 0;
+    public override long BytesSent { get { return _bytes; } }
+
     /**
      * Each listener has an integer associated with it.
      * This map allows us to look up a listener
@@ -230,6 +233,7 @@ namespace Brunet.Transport
         int offset = p.CopyTo(_ba.Buffer, _ba.Offset);
         mb = MemBlock.Reference(_ba.Buffer, _ba.Offset, offset);
         _ba.AdvanceBuffer(offset);
+        _bytes += offset;
       }
 
       SimulationEdge se_from = (SimulationEdge)from;
