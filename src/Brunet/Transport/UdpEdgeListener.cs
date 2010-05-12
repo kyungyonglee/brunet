@@ -350,7 +350,8 @@ namespace Brunet.Transport
         //Actually update:
         TransportAddress rta = TransportAddressFactory.CreateInstance(this.TAType,(IPEndPoint)end);
         if( _ta_auth.Authorize(rta) != TAAuthorizer.Decision.Deny ) {
-          edge.End = end;
+          IPEndPoint this_end = (IPEndPoint) end;
+          edge.End = new IPEndPoint(this_end.Address, this_end.Port);
           NatDataPoint dp = new RemoteMappingChangePoint(DateTime.UtcNow, edge);
           Interlocked.Exchange<NatHistory>(ref _nat_hist, _nat_hist + dp);
           Interlocked.Exchange<IEnumerable>(ref _nat_tas, new NatTAs( _tas, _nat_hist ));
