@@ -424,20 +424,15 @@ namespace Brunet.Transport
     public override void CreateEdgeTo(TransportAddress ta, EdgeCreationCallback ecb)
     {
       Edge e = null;
-      try {
-      if( !IsStarted )
-      {
-	throw new EdgeException("UdpEdgeListener is not started");
-      }
-      else if( ta.TransportAddressType != this.TAType ) {
-	throw new EdgeException(ta.TransportAddressType.ToString()
-				+ " is not my type: " + this.TAType.ToString() );
-      }
-      else if( _ta_auth.Authorize(ta) == TAAuthorizer.Decision.Deny ) {
-        //Too bad.  Can't make this edge:
-	throw new EdgeException( ta.ToString() + " is not authorized");
-      }
-      else {
+      Exception ex = null;
+      if( !IsStarted ) {
+        ex = new EdgeException("UdpEdgeListener is not started");
+      } else if( ta.TransportAddressType != this.TAType ) {
+        ex = new EdgeException(ta.TransportAddressType.ToString()
+            + " is not my type: " + this.TAType.ToString() );
+      } else if( _ta_auth.Authorize(ta) == TAAuthorizer.Decision.Deny ) {
+        ex = new EdgeException( ta.ToString() + " is not authorized");
+      } else {
         IPAddress first_ip = ((IPTransportAddress) ta).GetIPAddress();
         IPEndPoint end = new IPEndPoint(first_ip, ((IPTransportAddress) ta).Port);
         /* We have to keep our mapping of end point to edges up to date */
@@ -456,16 +451,19 @@ namespace Brunet.Transport
         Interlocked.Exchange<NatHistory>(ref _nat_hist, _nat_hist + dp);
         Interlocked.Exchange<IEnumerable>(ref _nat_tas, new NatTAs( _tas, _nat_hist ));
 
-        /* Tell me when you close so I can clean up the table */
-        e.CloseEvent += this.CloseHandler;
-        ecb(true, e, null);
-      }
-      } catch(Exception ex) {
-        if( e != null ) {
-          //Clean up the edge
-          CloseHandler(e, null);
+        try {
+          /* Tell me when you close so I can clean up the table */
+          e.CloseEvent += this.CloseHandler;
+        } catch (Exception x) {
+          e = null;
+          ex = x;
         }
-	ecb(false, null, ex);
+      }
+
+      if(e != null) {
+        ecb(true, e, null);
+      } else {
+        ecb(false, null, ex);
       }
     }
 
@@ -624,6 +622,7 @@ namespace Brunet.Transport
       DateTime last_debug = DateTime.UtcNow;
       int debug_period = 5000;
       bool logging = ProtocolLog.Monitor.Enabled;
+      int rec_bytes = 0;
       while(1 == _running) {
         if(logging) {
           DateTime now = DateTime.UtcNow;
@@ -633,35 +632,31 @@ namespace Brunet.Transport
           }
         }
 
+        int max = ba.Capacity;
         try {
-          int max = ba.Capacity;
-          int rec_bytes = _s.ReceiveFrom(ba.Buffer, ba.Offset, max,
+          rec_bytes = _s.ReceiveFrom(ba.Buffer, ba.Offset, max,
                                           SocketFlags.None, ref end);
-          //Get the id of this edge:
-          if( rec_bytes >= 8 ) {
-            int remoteid = NumberSerializer.ReadInt(ba.Buffer, ba.Offset);
-            int localid = NumberSerializer.ReadInt(ba.Buffer, ba.Offset + 4);
-
-            MemBlock packet_buffer = MemBlock.Reference(ba.Buffer, ba.Offset + 8, rec_bytes - 8);
-            ba.AdvanceBuffer(rec_bytes);
-
-            if( localid < 0 ) {
-              /*
-              * We never give out negative id's, so if we got one
-              * back the other node must be sending us a control
-              * message.
-              */
-              HandleControlPacket(remoteid, localid, packet_buffer, null);
-            }
-            else {
-              HandleDataPacket(remoteid, localid, packet_buffer, end, null);
-            }
-          }
-        }
-        catch(SocketException x) {
+        } catch(SocketException x) {
           if((1 == _running) && ProtocolLog.Exceptions.Enabled) {
             ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
           }
+        }
+
+        if(rec_bytes < 8) {
+          continue;
+        }
+
+        int remoteid = NumberSerializer.ReadInt(ba.Buffer, ba.Offset);
+        int localid = NumberSerializer.ReadInt(ba.Buffer, ba.Offset + 4);
+
+        MemBlock packet_buffer = MemBlock.Reference(ba.Buffer, ba.Offset + 8, rec_bytes - 8);
+        ba.AdvanceBuffer(rec_bytes);
+
+        if( localid < 0 ) {
+          // Negative IDs are control messages
+          HandleControlPacket(remoteid, localid, packet_buffer, null);
+        } else {
+          HandleDataPacket(remoteid, localid, packet_buffer, end, null);
         }
       }
       //Let everyone know we are out of the loop
@@ -677,14 +672,13 @@ namespace Brunet.Transport
      * could be updated to handle exceptions that the socket might throw.
      */
     protected void SendControl(byte[] Data, EndPoint End) {
-      lock(_send_sync) {
-        try {
+      try {
+        lock(_send_sync) {
           _s.SendTo(Data, End);
         }
-        catch(Exception x) {
-          if((1 == _running) && ProtocolLog.Exceptions.Enabled) {
-            ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
-          }
+      } catch(Exception x) {
+        if((1 == _running) && ProtocolLog.Exceptions.Enabled) {
+          ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
         }
       }
     }
