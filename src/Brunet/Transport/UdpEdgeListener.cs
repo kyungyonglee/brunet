@@ -192,58 +192,70 @@ namespace Brunet.Transport
      * This handles lightweight control messages that may be sent
      * by UDP
      */
-    protected void HandleControlPacket(int remoteid, int n_localid, MemBlock buffer,
-                                       object state)
+    protected void HandleControlPacket(int remoteid, int n_localid,
+                                       MemBlock buffer, object state)
     {
       int local_id = ~n_localid;
-      //Reading from a hashtable is treadsafe
-      UdpEdge e = (UdpEdge)_id_ht[local_id];
-      if( (e != null) && (e.RemoteID == remoteid) ) {
-        //This edge has some control information.
+      UdpEdge e = _id_ht[local_id] as UdpEdge;
+      if(e == null) {
+        return;
+      }
+
+      if(e.RemoteID == 0) {
         try {
-          ControlCode code = (ControlCode)NumberSerializer.ReadInt(buffer, 0);
-          if(ProtocolLog.UdpEdge.Enabled)
-            ProtocolLog.Write(ProtocolLog.UdpEdge, String.Format(
-              "Got control {1} from: {0}", e, code));
-          if( code == ControlCode.EdgeClosed ) {
-            //The edge has been closed on the other side
-            RequestClose(e);
-            CloseHandler(e, null);
-          }
-          else if( code == ControlCode.EdgeDataAnnounce ) {
-            //our NAT mapping may have changed:
-            IDictionary info =
-              (IDictionary)AdrConverter.Deserialize( buffer.Slice(4) );
-            string our_local_ta = (string)info["RemoteTA"]; //his remote is our local
-            if( our_local_ta != null ) {
-              //Update our list:
-              TransportAddress new_ta = TransportAddressFactory.CreateInstance(our_local_ta);
-              TransportAddress old_ta = e.PeerViewOfLocalTA;
-              if( ! new_ta.Equals( old_ta ) ) {
-                if(ProtocolLog.UdpEdge.Enabled)
-                  ProtocolLog.Write(ProtocolLog.UdpEdge, String.Format(
-                    "Local NAT Mapping changed on Edge: {0}\n{1} => {2}",
-                 e, old_ta, new_ta));
-                //Looks like matters have changed:
-                this.UpdateLocalTAs(e, new_ta);
-                /**
-                 * @todo, maybe we should ping the other edges sharing this
-                 * EndPoint, but we need to be careful not to do some O(E^2)
-                 * operation, which could easily happen if each EdgeDataAnnounce
-                 * triggered E packets to be sent
-                 */
-              }
+          e.RemoteID = remoteid;
+        } catch {
+          return;
+        }
+      }
+
+      if(e.RemoteID != remoteid) {
+        return;
+      }
+
+      try {
+        ControlCode code = (ControlCode)NumberSerializer.ReadInt(buffer, 0);
+        if(ProtocolLog.UdpEdge.Enabled)
+          ProtocolLog.Write(ProtocolLog.UdpEdge, String.Format(
+            "Got control {1} from: {0}", e, code));
+        if( code == ControlCode.EdgeClosed ) {
+          //The edge has been closed on the other side
+          RequestClose(e);
+          CloseHandler(e, null);
+        }
+        else if( code == ControlCode.EdgeDataAnnounce ) {
+          //our NAT mapping may have changed:
+          IDictionary info =
+            (IDictionary)AdrConverter.Deserialize( buffer.Slice(4) );
+          string our_local_ta = (string)info["RemoteTA"]; //his remote is our local
+          if( our_local_ta != null ) {
+            //Update our list:
+            TransportAddress new_ta = TransportAddressFactory.CreateInstance(our_local_ta);
+            TransportAddress old_ta = e.PeerViewOfLocalTA;
+            if( ! new_ta.Equals( old_ta ) ) {
+              if(ProtocolLog.UdpEdge.Enabled)
+                ProtocolLog.Write(ProtocolLog.UdpEdge, String.Format(
+                  "Local NAT Mapping changed on Edge: {0}\n{1} => {2}",
+               e, old_ta, new_ta));
+              //Looks like matters have changed:
+              this.UpdateLocalTAs(e, new_ta);
+              /**
+               * @todo, maybe we should ping the other edges sharing this
+               * EndPoint, but we need to be careful not to do some O(E^2)
+               * operation, which could easily happen if each EdgeDataAnnounce
+               * triggered E packets to be sent
+               */
             }
           }
-          else if( code == ControlCode.Null ) {
-            //Do nothing in this case
-          }
         }
-        catch(Exception x) {
-        //This could happen if this is some control message we don't understand
-          if(ProtocolLog.Exceptions.Enabled)
-            ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
+        else if( code == ControlCode.Null ) {
+          //Do nothing in this case
         }
+      }
+      catch(Exception x) {
+      //This could happen if this is some control message we don't understand
+        if(ProtocolLog.Exceptions.Enabled)
+          ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
       }
     }
 
@@ -373,9 +385,10 @@ namespace Brunet.Transport
           Interlocked.Exchange<NatHistory>(ref _nat_hist, _nat_hist + dp);
           Interlocked.Exchange<IEnumerable>(ref _nat_tas, new NatTAs( _tas, _nat_hist ));
           edge.CloseEvent += this.CloseHandler;
-          //If we make it here, the edge wasn't closed,
-          //go ahead and process it.
+          //If we make it here, the edge wasn't closed, go ahead and process it.
           SendEdgeEvent(edge);
+          // Stun support
+          SendControlPacket(end, remoteid, localid, ControlCode.EdgeDataAnnounce, state);
         }
         catch {
           //Make sure this edge is closed and we are done with it.
