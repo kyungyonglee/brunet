@@ -606,12 +606,12 @@ namespace Brunet.Transport
         _listen_thread.Join();
       }
 
-      ArrayList list = null;
-      lock(_sync) {
-        list = new ArrayList(_id_ht.Values);
+      Hashtable id_ht = null;
+      lock(_id_ht) {
+        id_ht = new Hashtable(_id_ht);
       }
 
-      foreach(Edge e in list) {
+      foreach(Edge e in id_ht.Values) {
         try {
           e.Close();
         } catch { }
