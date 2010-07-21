@@ -655,8 +655,8 @@ namespace Brunet.Transport
           rec_bytes = _s.ReceiveFrom(ba.Buffer, ba.Offset, max,
                                           SocketFlags.None, ref end);
         } catch(SocketException x) {
-          if((1 == _running) && ProtocolLog.Exceptions.Enabled) {
-            ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
+          if((1 == _running) && ProtocolLog.UdpEdge.Enabled) {
+            ProtocolLog.Write(ProtocolLog.UdpEdge, x.ToString());
           }
         }
 
