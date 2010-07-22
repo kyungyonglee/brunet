@@ -23,9 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-//#define DEBUG_BYTES
-
-using Brunet;
 using System;
 using System.IO;
 using System.Threading;
@@ -33,8 +30,9 @@ using System.Net.Sockets;
 using System.Net;
 using System.Collections;
 
-using Brunet.Util;
+using Brunet.Concurrent;
 using Brunet.Messaging;
+using Brunet.Util;
 namespace Brunet.Transport
 {
   /**
@@ -51,8 +49,6 @@ namespace Brunet.Transport
     protected long _bytes = 0;
     public override long BytesSent { get { return _bytes; } }
 
-    protected Object _send_sync = new Object();
-    protected byte[] _send_buffer = new byte[8 + Int16.MaxValue];
     /*
      * This is the object which we pass to UdpEdges when we create them.
      */
@@ -490,6 +486,8 @@ namespace Brunet.Transport
 
     ///this is the thread were the socket is read:
     protected readonly Thread _listen_thread;
+    protected readonly Thread _send_thread;
+    protected readonly LFBlockingQueue<UdpMessage> _send_queue;
 
     public UdpEdgeListener() : this(0, null, null)
     {
@@ -541,16 +539,16 @@ namespace Brunet.Transport
       _rand = new Random();
       _send_handler = this;
       _listen_finished_event = new ManualResetEvent(false);
-      _listen_thread = new Thread( new ThreadStart(this.ListenThread) );
+      _listen_thread = new Thread(ListenThread);
+      _send_thread = new Thread(SendThread);
+      _send_thread.IsBackground = true;
+      _send_queue = new LFBlockingQueue<UdpMessage>();
     }
 
     protected void SendControlPacket(EndPoint end, int remoteid, int localid,
                                      ControlCode c, object state) 
     {
       using(MemoryStream ms = new MemoryStream()) {
-        NumberSerializer.WriteInt(localid, ms);
-        //Bit flip to indicate this is a control packet
-        NumberSerializer.WriteInt(~remoteid, ms);
         NumberSerializer.WriteInt((int)c, ms);
         if( c == ControlCode.EdgeDataAnnounce ) {
           UdpEdge e = (UdpEdge)_id_ht[localid];
@@ -568,7 +566,7 @@ namespace Brunet.Transport
           }
         }
 
-        SendControl(ms.ToArray(), end);
+        _send_queue.Enqueue(new UdpMessage(localid, ~remoteid, MemBlock.Reference(ms.ToArray()), end));
         if(ProtocolLog.UdpEdge.Enabled) {
           ProtocolLog.Write(ProtocolLog.UdpEdge, String.Format(
             "Sending control {1} to: {0}", end, c));
@@ -588,6 +586,7 @@ namespace Brunet.Transport
       }
       Interlocked.Exchange(ref _running, 1);
       _listen_thread.Start();
+      _send_thread.Start();
     }
 
     /**
@@ -608,7 +607,9 @@ namespace Brunet.Transport
           SendControlPacket(ep, 0, 0, ControlCode.Null, null);
           //Wait 500 ms for the thread to get the packet
         } while( false == _listen_finished_event.WaitOne(500, false) );
+        _send_queue.Enqueue(null);
         _listen_thread.Join();
+        _send_thread.Join();
       }
 
       Hashtable id_ht = null;
@@ -671,7 +672,7 @@ namespace Brunet.Transport
         ba.AdvanceBuffer(rec_bytes);
 
         if( localid < 0 ) {
-          // Negative IDs are control messages
+          // Negative ids are control messages
           HandleControlPacket(remoteid, localid, packet_buffer, null);
         } else {
           HandleDataPacket(remoteid, localid, packet_buffer, end, null);
@@ -684,46 +685,53 @@ namespace Brunet.Transport
       _s = null;
     }
 
-    /**
-     * @todo The previous interface did not throw an exception to a user
-     * since the send was called in another thread.  All code that calls this
-     * could be updated to handle exceptions that the socket might throw.
-     */
-    protected void SendControl(byte[] Data, EndPoint End) {
-      try {
-        lock(_send_sync) {
-          _s.SendTo(Data, End);
+    protected void SendThread()
+    {
+      byte[] buffer = new byte[8 + Int16.MaxValue];
+      bool timedout = false;
+
+      while(_running == 1) {
+        UdpMessage to_send = _send_queue.Dequeue(-1, out timedout);
+        if(to_send == null) {
+          break;
         }
-      } catch(Exception x) {
-        if((1 == _running) && ProtocolLog.Exceptions.Enabled) {
-          ProtocolLog.Write(ProtocolLog.Exceptions, x.ToString());
+        NumberSerializer.WriteInt(to_send.LocalID, buffer, 0);
+        NumberSerializer.WriteInt(to_send.RemoteID, buffer, 4);
+        int length = to_send.Data.CopyTo(buffer, 8);
+
+        try {
+          _s.SendTo(buffer, 8 + length, SocketFlags.None, to_send.Dst);
+        } catch(SocketException x) {
+          if((1 == _running) && ProtocolLog.UdpEdge.Enabled) {
+            ProtocolLog.Write(ProtocolLog.UdpEdge, x.ToString());
+          }
         }
       }
     }
 
     /**
-     * When UdpEdge objects call Send, it calls this packet
-     * callback:
-     * @todo The previous interface did not throw an exception to a user
-     * since the send was called in another thread.  All code that calls this
-     * could be updated to handle exceptions that the socket might throw.
+     * When UdpEdge objects call Send, it calls this packet callback:
      */
     public void HandleEdgeSend(Edge from, ICopyable p) {
-      UdpEdge sender = (UdpEdge) from;
-      lock(_send_sync) {
-        //Write the IDs of the edge:
-        //[local id 4 bytes][remote id 4 bytes][packet]
-        NumberSerializer.WriteInt(sender.ID, _send_buffer, 0);
-        NumberSerializer.WriteInt(sender.RemoteID, _send_buffer, 4);
-        int length = p.CopyTo(_send_buffer, 8) + 8;
-        try {
-          _s.SendTo(_send_buffer, length, SocketFlags.None, sender.End);
-        }
-        catch(Exception x) {
-          bool transient = (1 == _running);
-          throw new SendException(transient, String.Format("Problem sending on: {0}",sender), x);
-        }
-        _bytes += length;
+      if(_send_queue.Count > 256) {
+        throw new EdgeException(true, "Could not send on: " + from);
+      }
+      UdpEdge edge = from as UdpEdge;
+      _send_queue.Enqueue(new UdpMessage(edge.ID, edge.RemoteID, p, edge.End));
+    }
+
+    public class UdpMessage {
+      public readonly int LocalID;
+      public readonly int RemoteID;
+      public readonly ICopyable Data;
+      public readonly EndPoint Dst;
+
+      public UdpMessage(int localid, int remoteid, ICopyable data, EndPoint dst)
+      {
+        LocalID = localid;
+        RemoteID = remoteid;
+        Data = data;
+        Dst = dst;
       }
     }
   }
