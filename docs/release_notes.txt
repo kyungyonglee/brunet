@@ -1,4 +1,15 @@
 ===============================================================================
+Revision 9.5.1
+-------------------------------------------------------------------------------
+- Increased security timeouts to 7.5, 15 minutes
+- Decreased security failure timeouts to 2 minutes
+- Fixed a simulator bug
+- RpcDhtProxy stores values across restarts
+- In Debian, when installing a new GroupVPN, it will restart itself if it is
+  currently running
+- ipop.vpn.config shouldn't be overwritten in Debian any more
+- hostname updating handled when USE_IPOP_HOSTNAME is set
+===============================================================================
 Revision 9.5.0
 -------------------------------------------------------------------------------
 - First version using new Brunet core
