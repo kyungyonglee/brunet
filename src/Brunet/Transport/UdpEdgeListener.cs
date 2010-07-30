@@ -714,7 +714,9 @@ namespace Brunet.Transport
      */
     public void HandleEdgeSend(Edge from, ICopyable p) {
       if(_send_queue.Count > 256) {
-        throw new EdgeException(true, "Could not send on: " + from);
+        // This may be causing the memory leak ... not certain
+        return;
+//        throw new EdgeException(true, "Could not send on: " + from);
       }
       UdpEdge edge = from as UdpEdge;
       _send_queue.Enqueue(new UdpMessage(edge.ID, edge.RemoteID, p, edge.End));
