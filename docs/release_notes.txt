@@ -1,4 +1,59 @@
 ===============================================================================
+Revision 9.5.0
+-------------------------------------------------------------------------------
+- First version using new Brunet core
+- Xmpp bootstrapping support
+- PathEdgeListeners to support multiplexing of a single EdgeListener across
+  many Nodes
+- Cleaned up BasicNode and its application in inherited classes
+- IP <=> Brunet Address translation more scalable and better handled
+- Rewrote security stack for simplicity
+===============================================================================
+Revision 9.4.13
+-------------------------------------------------------------------------------
+- Throwing an exception in the Send loop of UDP causes a memory leak
+- Check UDP packet size before parsing
+- In UdpEL, unhandled exception, some packets may be too large to fit into the
+  buffer
+===============================================================================
+Revision 9.4.12
+-------------------------------------------------------------------------------
+- In Ubuntu, when performing self-domainname lookup, it performs AAAA
+  searches waaay before performing A searches, this creates significant delay
+  on operations that rely on self-lookups.  This patch assumes that an AAAA
+  search will be happy with an IPv4 address being returned.  The current code
+  cannot handle IPv6 addresses.
+===============================================================================
+Revision 9.4.11
+-------------------------------------------------------------------------------
+- Made Udp Send run in its own loop, in previous code, the Udp was blocking
+  causing weird delays in the system and breaking usefulness of IPOP.
+===============================================================================
+Revision 9.4.10
+-------------------------------------------------------------------------------
+- StaticDns is case insensitive
+===============================================================================
+Revision 9.4.9
+-------------------------------------------------------------------------------
+- In UDP, new Edges weren't being notified of their proper address mapping via
+  the remote EdgeListener as soon as they were created, which was preventing
+  NAT traversal.  I guess the same behavior should probably be added to the
+  TCP module, otherwise port forwarding and DMZ will fail for it as well.
+===============================================================================
+Revision 9.4.8
+-------------------------------------------------------------------------------
+- If a proper lc.* certificate is in the certs dir but doesn't match the
+  current node's node id, it won't muck things up
+===============================================================================
+Revision 9.4.7
+-------------------------------------------------------------------------------
+- Fixed a rare bug in Brunet, which would effectively kill the system
+- UdpEL wasn't updating RemoteTAs properly
+===============================================================================
+Revision 9.4.6
+-------------------------------------------------------------------------------
+- Broke Dns configuration in previous release
+===============================================================================
 Revision 9.4.5
 -------------------------------------------------------------------------------
 - Fixed a bug in Local TA Discovery (was broken)
