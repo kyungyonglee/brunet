@@ -1,4 +1,13 @@
 ===============================================================================
+Revision 9.5.2
+-------------------------------------------------------------------------------
+- Replaced Chota with an OnDemandCO creater, much better for GroupVPN
+- IPOP uses TAAuth so that Brunet doesn't attempt to connect over IPOP
+- Made a TimeBasedCache based upon the work used on DhtAddressResolver
+- Ported the DhtAddressResolver to use this Cache
+- loading and dumping of the Dht could block infinitely, now its based upon a
+  60 second timer, afterwhich point it gives up
+===============================================================================
 Revision 9.5.1
 -------------------------------------------------------------------------------
 - Increased security timeouts to 7.5, 15 minutes
