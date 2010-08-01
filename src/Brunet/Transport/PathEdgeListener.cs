@@ -466,6 +466,10 @@ namespace Brunet.Transport {
   /** Class to wrap underlying EdgeListeners with the Pathing protocol
    */
   public class PathEdgeListener : EdgeListener {
+    override public TAAuthorizer TAAuth {
+      get { return _el.TAAuth;}
+      set { _el.TAAuth = value; }
+    }
 
     public override long BytesSent { get { return _el.BytesSent; } }
 
