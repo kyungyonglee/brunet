@@ -1,4 +1,10 @@
 ===============================================================================
+Revision 9.5.3
+-------------------------------------------------------------------------------
+- (This was a bug fixed in 9.4.13 but must have been missed in the switch to
+  the new repository) - In UdpEL, unhandled exception, some packets may be too
+  large to fit into the buffer
+===============================================================================
 Revision 9.5.2
 -------------------------------------------------------------------------------
 - Replaced Chota with an OnDemandCO creater, much better for GroupVPN
