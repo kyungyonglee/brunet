@@ -1,4 +1,15 @@
 ===============================================================================
+Revision 9.5.4
+-------------------------------------------------------------------------------
+- OnDemand was using a potentially null object in the LinkerEndHandler - could
+  create poorly handled exceptions
+- Removed unused code from RpcManager
+- In AHSender, merged protected readonly with public accessors into public
+  readonly
+- Added an overlay testing suite for hops, drop rate, and latency
+- AHSenders when being used as a return from will return the amount of Hops
+  between the source and destination
+===============================================================================
 Revision 9.5.3
 -------------------------------------------------------------------------------
 - (This was a bug fixed in 9.4.13 but must have been missed in the switch to
