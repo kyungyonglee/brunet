@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+ 
+<project name="Brunet" default="build">
+  <property name="build.dir" value="${nant.project.basedir}/build"/>
+  <property name="lib.dir" value="${nant.project.basedir}/lib"/>
+  <property name="assembly" value="Brunet"/>
+ 
+  <target name="build" description="Builds recursively all subprojects">
+    <property name="configured" value="true"/>
+
+    <nant buildfile="src/Brunet/default.build" />
+    <nant buildfile="src/Brunet/Services/Dht/default.build" />
+    <nant buildfile="src/Brunet/Services/Coordinate/default.build" />
+    <nant buildfile="src/Brunet/Services/XmlRpc/default.build" />
+    <nant buildfile="src/Brunet/Security/default.build" />
+    <nant buildfile="src/Brunet/Applications/default.build" />
+    <nant buildfile="tests/protocol/default.build" />
+  </target>
+
+  <target name="clean" description="Deletes the current configuration">
+    <delete dir="${build.dir}" failonerror="false"/>
+
+    <delete failonerror="false">
+      <fileset basedir="lib/">
+        <include name="Brunet*.dll"/>
+      </fileset>
+    </delete>
+  </target>
+
+  <target name="plabtest-build"
+    description="make a zip file to be tested with WebUI"
+    depends="build">
+    <zip zipfile="basicnode.zip" encoding="utf-8">
+      <fileset basedir="src/Brunet/Applications/build/" prefix="">
+          <include name="*" />
+      </fileset>
+    </zip>
+
+  </target>
+
+  <target name="simulator" description="compiles the simulator">
+    <nant target="simulator" buildfile="src/Brunet/default.build" />
+    <nant buildfile="src/Brunet/Services/Dht/default.build" />
+    <nant buildfile="src/Brunet/Services/Coordinate/default.build" />
+    <nant buildfile="src/Brunet/Services/XmlRpc/default.build" />
+    <nant buildfile="src/Brunet/Simulator/default.build" />
+    <nant buildfile="src/Brunet/Graph/default.build" />
+  </target>
+
+  <target name="test" description="nunit test brunet!">
+    <nant target="simulator" buildfile="src/Brunet/default.build" />
+    <nant buildfile="src/Brunet/Services/Dht/default.build" />
+    <nant buildfile="src/Brunet/Services/Coordinate/default.build" />
+    <nant buildfile="src/Brunet/Services/XmlRpc/default.build" />
+    <nant target="test" buildfile="src/Brunet/Simulator/default.build" />
+
+    <nant buildfile="src/Brunet/default.build" />
+    <nant target="test" buildfile="src/Brunet/Services/Dht/default.build" />
+    <nant target="test" buildfile="src/Brunet/Services/Coordinate/default.build" />
+    <nant target="nunit_test" buildfile="src/Brunet/default.build" />
+  </target>
+</project>

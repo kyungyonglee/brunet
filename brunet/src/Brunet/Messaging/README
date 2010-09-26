@@ -1,0 +1,13 @@
+PURPOSE
+==========
+The Brunet.Messaging module provides a basic model for datagram style
+messaging, and services which can be build on top of such a model.  There is
+nothing specific to P2P protocols here, but only communication tools that make
+building systems easier.
+
+MODULE DEPENDENCIES
+==========
+This code depends on:
+Brunet.Collections
+Brunet.Concurrent
+Brunet.Util
