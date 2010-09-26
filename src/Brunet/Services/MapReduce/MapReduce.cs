@@ -407,18 +407,25 @@ namespace Brunet.Services.MapReduce {
     /** argument to the reduce function. */
     public readonly object ReduceArg;
 
+    public readonly int WaitFactor;
+    public readonly double Fraction;
+
     /**
      * Constructor
      */
     public MapReduceArgs(string task_name, 
                          object map_arg,
                          object gen_arg,
-                         object reduce_arg)
+                         object reduce_arg,
+                         int wait_factor,
+                         double fraction)
     {
       TaskName = task_name;
       MapArg = map_arg;
       GenArg = gen_arg;
       ReduceArg = reduce_arg;
+      WaitFactor = wait_factor;
+      Fraction = fraction;
     }
     
     /**
@@ -429,6 +436,7 @@ namespace Brunet.Services.MapReduce {
       MapArg =  ht["map_arg"];
       GenArg = ht["gen_arg"];
       ReduceArg = ht["reduce_arg"];
+      WaitFactor = (int)ht["wait_factor"];
     }
     
     /**
@@ -440,6 +448,7 @@ namespace Brunet.Services.MapReduce {
       ht["map_arg"] = MapArg;
       ht["gen_arg"] = GenArg;
       ht["reduce_arg"] = ReduceArg;
+      ht["wait_factor"] = WaitFactor;
       return ht;
     }
   }
@@ -489,6 +498,11 @@ namespace Brunet.Services.MapReduce {
 
     // Rpc related state
     protected readonly object _mr_request_state;
+
+    //added by Kyungyong
+    protected readonly long _begin_ticks;
+    protected SimpleTimer _return_timer;
+    protected double _complete_frac;
 
     /*
      * Represents the state of the MapReduceComputation
@@ -636,6 +650,9 @@ namespace Brunet.Services.MapReduce {
       //Here is our state variable:
       _state = new State();
       _result = State.DEFAULT_OBJ;
+      _begin_ticks = DateTime.UtcNow.Ticks;
+      _return_timer = null;
+      _complete_frac = 0.0;
     }
     
     /** Starts the computation. */
@@ -885,6 +902,22 @@ namespace Brunet.Services.MapReduce {
       RpcResult child_r;
       Channel child_q = (Channel)cq;
       MapReduceInfo mri = (MapReduceInfo)child_q.State;
+
+      if(_mr_args.WaitFactor > 0){
+        _complete_frac += mri.Args.Fraction;
+        int due_time = (int)((1/_complete_frac)*_mr_args.WaitFactor * (DateTime.UtcNow.Ticks-_begin_ticks)/TimeSpan.TicksPerMillisecond);
+        System.Threading.WaitCallback send_result = delegate(object oo) {
+          SendResult( _state.ReduceResult );
+        };
+
+        if(_return_timer != null){
+          _return_timer.Stop();
+        }
+        _return_timer = new SimpleTimer(send_result, null, due_time, 0);
+        _return_timer.Start();
+      }
+
+      
       if (LogEnabled) {
         ProtocolLog.Write(ProtocolLog.MapReduce,        
                           String.Format("MapReduce: {0}, handling child result from: {1}.", _node.Address, mri.Sender.ToUri()));

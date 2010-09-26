@@ -700,10 +700,14 @@ namespace Brunet.Transport
         NumberSerializer.WriteInt(sender.RemoteID, _send_buffer, 4);
         int plength = p.CopyTo(_send_buffer, 8);
         try {
-          _s.SendTo(_send_buffer, 8 + plength, SocketFlags.None, sender.End);
+          int sent_size = _s.SendTo(_send_buffer, 8 + plength, SocketFlags.None, sender.End);
+          if(sent_size != 8 + plength){
+            Console.WriteLine("sent byte mismatch");
+          }
         }
         catch(Exception x) {
           bool transient = (1 == _running);
+          Console.WriteLine("UDP Edge sent exception with: {0}", x);
           throw new SendException(transient, String.Format("Problem sending on: {0}",sender), x);
         }
       }

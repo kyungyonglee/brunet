@@ -114,7 +114,16 @@ namespace Brunet.Symphony
       //Subscribe map-reduce tasks
       _mr_handler.SubscribeTask(new MapReduceTrace(this));
       _mr_handler.SubscribeTask(new MapReduceRangeCounter(this));
-
+      _mr_handler.SubscribeTask(new MapReduceGetConsistency(this));
+      _mr_handler.SubscribeTask(new MapReduceGetNeighborInfo(this));
+      _mr_handler.SubscribeTask(new MapReduceDemoRf(this));
+      _mr_handler.SubscribeTask(new MapReduceCheckDnsMatching(this));
+      _mr_handler.SubscribeTask(new MapReduceMatchmaking(this));
+      _mr_handler.SubscribeTask(new MapReduceRootUnicastMM(this));
+      _mr_handler.SubscribeTask(new MapReduceNoAggrMM(this));   
+      _mr_handler.SubscribeTask(new MapReduceZipfMatching(this)); 
+      _mr_handler.SubscribeTask(new MapReduceAddCoordinate(this)); 
+      
       
       /*
        * Handle Node state changes.

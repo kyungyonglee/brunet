@@ -22,20 +22,62 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 using System;
 using System.Collections;
 using System.Collections.Specialized;
-using Brunet.Concurrent;
+using System.Diagnostics;
+using System.Threading;
 
+using Brunet.Concurrent;
 using Brunet.Messaging;
+
 namespace Brunet.Services.MapReduce {
   /**
    * This class implements a map-reduce task that allows counting number of 
    * nodes in a range and also depth of the resulting trees. 
    */ 
-  public class MapReduceRangeCounter: MapReduceBoundedBroadcast {
-    public MapReduceRangeCounter(Node n): base(n) {}
+  public class MapReduceAddCoordinate: MapReduceBoundedBroadcast {
+    public MapReduceAddCoordinate(Node n): base(n) {}
     public override void Map(Channel q, object map_arg) {
       IDictionary my_entry = new ListDictionary();
       my_entry["count"] = 1;
-      my_entry["height"] = 1;
+      Channel ret = new Channel(1);
+      ret.CloseEvent += delegate(object o, EventArgs args) {
+        RpcResult info_res = (RpcResult) ret.Dequeue();
+        Hashtable ht = (Hashtable) info_res.Result;
+        foreach(DictionaryEntry de in ht){
+          if((string)de.Key == "geo_loc"){
+            try{
+              string location = de.Value as string;
+              if(location != null){
+                string[] sep = location.Split(',');
+                double latitude = Double.Parse(sep[0]);
+                double longitude =  Double.Parse(sep[1]);
+
+                Process p = new Process();
+                p.StartInfo.FileName = "condor_config_val";
+                p.StartInfo.CreateNoWindow = true;
+                p.StartInfo.Arguments = "-startd -rset \"COORDINATE = \\\"" + location + "\\\"\"";
+                p.Start();
+                p.WaitForExit();
+                p.StartInfo.Arguments = "-startd -rset \"LATITUDE = " + latitude.ToString() + "\"";
+                p.Start();
+                p.WaitForExit();
+                p.StartInfo.Arguments = "-startd -rset \"LONGITUDE = " + longitude.ToString() + "\"";
+                p.Start();
+                p.WaitForExit();
+                p.StartInfo.Arguments = "-startd -rset \"STARTD_ATTRS = \\$(STARTD_ATTRS) COORDINATE LATITUDE LONGITUDE BRUNET_ADDRESS\"";
+                p.Start();
+                p.WaitForExit();
+                p.StartInfo.FileName = "condor_reconfig";
+                p.StartInfo.CreateNoWindow = true;
+                p.StartInfo.Arguments = null;
+                p.Start();
+              }
+            }catch(Exception e){
+              Console.WriteLine(e);
+            }
+          }
+        }
+      };
+      _node.Rpc.Invoke(_node, ret, "Information.Info");
       q.Enqueue( my_entry );
     }
     
@@ -43,8 +85,6 @@ namespace Brunet.Services.MapReduce {
                                   object current_result, RpcResult child_rpc) {
 
       bool done = false;
-      //ISender child_sender = child_rpc.ResultSender;
-      //the following can throw an exception, will be handled by the framework
       object child_result = null;
 
       try{
@@ -62,15 +102,10 @@ namespace Brunet.Services.MapReduce {
       
       IDictionary my_entry = current_result as IDictionary;
       IDictionary value = child_result as IDictionary;
-      int max_height = (int) my_entry["height"];
       int count = (int) my_entry["count"];
 
       int y = (int) value["count"];
       my_entry["count"] = count + y;
-      int z = (int) value["height"] + 1;
-      if (z > max_height) {
-        my_entry["height"] = z; 
-      }
       q.Enqueue(new Brunet.Collections.Pair<object, bool>(my_entry, done));
     }
   }

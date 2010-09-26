@@ -25,6 +25,7 @@ using System.Xml.Serialization;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Net;
+using System.Diagnostics;
 
 using Brunet;
 using Brunet.Services.Coordinate;
@@ -38,6 +39,7 @@ using Brunet.Transport;
 using Brunet.Messaging;
 using Brunet.Symphony;
 using Brunet.Util;
+using Brunet.Services.DecenGrids;
 
 /**
 \namespace Brunet.Applications
@@ -79,6 +81,8 @@ namespace Brunet.Applications {
     protected Dictionary<string, PathELManager> _type_to_pem;
     protected Random _rand;
 
+    protected Process _condor_process;
+
     /// <summary>Prepares a BasicNode.</summary>
     /// <param name="node_config">A node config object.</param>
     public BasicNode(NodeConfig node_config)
@@ -108,10 +112,11 @@ namespace Brunet.Applications {
         new Information(node.Node, "BasicNode");
         Console.WriteLine("Starting at {0}, {1} is connecting to {2}.",
             DateTime.UtcNow, node.Node.Address, node.Node.Realm);
-
+        RunCondor();
         node.Node.DisconnectOnOverload = true;
         start_time = DateTime.UtcNow;
         node.Node.Connect();
+        
 
         if(!_running) {
           break;
@@ -371,5 +376,25 @@ namespace Brunet.Applications {
 
       Brunet.Util.FuzzyTimer.Instance.DoEvery(StopPem, 500, 500);
     }
+
+    public void RunCondor(){
+      try{
+        _condor_process = new Process();
+        _condor_process.StartInfo.FileName = "condor_master";
+        _condor_process.StartInfo.CreateNoWindow = true;
+        _condor_process.Start();
+      }catch(Exception e){
+        Console.WriteLine("exception = {0}",e);
+        return;
+      }
+      new DecentralizedCondor(10000, _app_node.Node);
+    }
+
+    public void StopCondor(){
+      try{
+        _condor_process.Kill();
+      }catch{}
+    }
+
   }
 }

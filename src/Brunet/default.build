@@ -48,6 +48,7 @@
         <include name="Concurrent/*.cs"/>
         <include name="Connections/*.cs"/>
         <include name="Services/MapReduce/*.cs"/>
+        <include name="Services/DecentralizedGrids/*.cs"/>
         <include name="Services/*.cs"/>
         <include name="Symphony/*.cs"/>
         <include name="Messaging/*.cs"/>
@@ -76,6 +77,7 @@
         <include name="Concurrent/*.cs"/>
         <include name="Connections/*.cs"/>
         <include name="Services/MapReduce/*.cs"/>
+        <include name="Services/DecentralizedGrids/*.cs"/>
         <include name="Services/*.cs"/>
         <include name="Symphony/*.cs"/>
         <include name="Messaging/*.cs"/>
@@ -85,6 +87,10 @@
       </sources>
       <references>
         <include name="System.Web.dll"/>
+        <include name="${lib.dir}/CondorSoap.dll"/>
+        <include name="${lib.dir}/classad.dll"/>
+        <include name="${lib.dir}/Brunet.Services.XmlRpc.dll"/>
+        <include name="${lib.dir}/Brunet.Services.Dht.dll"/>
       </references>
     </csc>
 
