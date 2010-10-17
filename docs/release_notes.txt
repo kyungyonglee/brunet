@@ -1,4 +1,13 @@
 ===============================================================================
+Revision 9.5.5
+-------------------------------------------------------------------------------
+- OnDemand will only close a connection if the node created it, the token
+  determines the node that created the connection
+- Fixed a bug in Linux, where resolv.conf had a bad entry, and
+  Dns.GetHostAddresses in IPHandler would block, causing Brunet to not work
+- Disabled testing of DTLS in the simulator
+- Reduced the time in the dump / load dht proxy scripts from 60 to 15
+===============================================================================
 Revision 9.5.4
 -------------------------------------------------------------------------------
 - OnDemand was using a potentially null object in the LinkerEndHandler - could
