@@ -509,6 +509,8 @@ namespace Brunet.Transport
     public UdpEdgeListener(int port, IEnumerable local_config_ips, TAAuthorizer ta_auth)
     {
       _s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+      _s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, Int32.MaxValue);
+      _s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, Int32.MaxValue);
       ipep = new IPEndPoint(IPAddress.Any, port);
       _s.Bind(ipep);
       _port = port = ((IPEndPoint) (_s.LocalEndPoint)).Port;
@@ -713,7 +715,8 @@ namespace Brunet.Transport
      * When UdpEdge objects call Send, it calls this packet callback:
      */
     public void HandleEdgeSend(Edge from, ICopyable p) {
-      if(_send_queue.Count > 256) {
+      if(_send_queue.Count > 1024) {
+        Console.WriteLine("Send queue too big: " + _send_queue.Count);
         // This may be causing the memory leak ... not certain
         return;
 //        throw new EdgeException(true, "Could not send on: " + from);
