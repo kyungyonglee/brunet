@@ -10,7 +10,9 @@ namespace Brunet.Simulator.Tasks {
     protected bool _done;
     /// <summary>Time taken to complete the Crawl.</summary>
     public TimeSpan TimeTaken { get { return _time_taken; } }
+    public long TicksTaken {get {return _ticks_taken; } }
     protected TimeSpan _time_taken;
+    protected long _ticks_taken;
 
     protected readonly EventHandler _finished;
     protected DateTime _start;
@@ -31,6 +33,7 @@ namespace Brunet.Simulator.Tasks {
     virtual protected void Finished()
     {
       _time_taken = DateTime.UtcNow - _start;
+      _ticks_taken = DateTime.UtcNow.Ticks - _start.Ticks;
       _done = true;
       if(_finished != null) {
         _finished(this, EventArgs.Empty);
