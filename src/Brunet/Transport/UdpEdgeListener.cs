@@ -748,6 +748,7 @@ namespace Brunet.Transport
       set {
         //Next time we receive a packet we'll update:
         _actions.Push(new SetAuthAction(value));
+        _ta_auth = value;
       }
     }
     
@@ -787,6 +788,7 @@ namespace Brunet.Transport
         //Always authorize in this case:
         ta_auth = new ConstantAuthorizer(TAAuthorizer.Decision.Allow);
       }
+      _ta_auth = ta_auth;
       //Don't keep a reference to this, we want to let it live in the other thread:
       var ls = new ListenerState(this, s, ta_auth);
       _listen_thread = new Thread( ls.ListenThread );
