@@ -726,7 +726,7 @@ public class AHHandler : IDataHandler {
                                     header.IncrementHops(),
                                     payload);
       try {
-        next_con.Send(new_packet);
+        next_con.State.Edge.Send(new_packet);
       }
       catch(SendException) {
         //Just drop the packet...

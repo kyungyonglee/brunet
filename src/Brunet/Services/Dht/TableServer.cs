@@ -216,11 +216,11 @@ namespace Brunet.Services.Dht {
         // We need to forward this to the appropriate node!
         if(((AHAddress)_node.Address).IsLeftOf((AHAddress) key_address)) {
           var con = structs.GetRightNeighborOf(_node.Address);
-          s = con;
+          s = con.State.Edge;
         }
         else {
           var con = structs.GetLeftNeighborOf(_node.Address);
-          s = con;
+          s = con.State.Edge;
         }
         _rpc.Invoke(s, remote_put, "dht.PutHandler", key, value, ttl, unique);
       }
@@ -603,7 +603,7 @@ namespace Brunet.Services.Dht {
           queue.CloseEvent += this.NextTransfer;
           int ttl = (int) (ent.EndTime - DateTime.UtcNow).TotalSeconds;
           try {
-            _ts._rpc.Invoke(_con, queue, "dht.PutHandler", ent.Key, ent.Value, ttl, false);
+            _ts._rpc.Invoke(_con.State.Edge, queue, "dht.PutHandler", ent.Key, ent.Value, ttl, false);
           }
           catch(BT.EdgeClosedException) {
             _interrupted = true;
@@ -670,7 +670,7 @@ namespace Brunet.Services.Dht {
           queue.CloseEvent += this.NextTransfer;
           int ttl = (int) (ent.EndTime - DateTime.UtcNow).TotalSeconds;
           try {
-            _ts._rpc.Invoke(_con, queue, "dht.PutHandler", ent.Key, ent.Value, ttl, false);
+            _ts._rpc.Invoke(_con.State.Edge, queue, "dht.PutHandler", ent.Key, ent.Value, ttl, false);
           }
           catch(BT.EdgeClosedException) {
             _interrupted = true;

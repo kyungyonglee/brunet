@@ -308,7 +308,7 @@ namespace Brunet.Connections
             RpcManager rpc = _node.Rpc;
             //This can throw, but it won't cause any failure since
             //this is only called when the connection attempt already failed.
-            rpc.Invoke(c, null, "sys:link.Ping", String.Empty);
+            rpc.Invoke(c.State.Edge, null, "sys:link.Ping", String.Empty);
           }
         }
       }

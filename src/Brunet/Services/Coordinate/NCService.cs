@@ -162,7 +162,7 @@ namespace Brunet.Services.Coordinate {
             }
         };
         try {
-          _rpc.Invoke(next_closest, result, "ncserver.ComputePathLatencyTo", a.ToString());
+          _rpc.Invoke(next_closest.State.Edge, result, "ncserver.ComputePathLatencyTo", a.ToString());
         }
         catch(Exception x) {
           //We must always return from an RPC call, and this is one:
@@ -267,7 +267,7 @@ namespace Brunet.Services.Coordinate {
         };
         
         try {
-          _node.Rpc.Invoke(_target, q, "ncserver.EchoVivaldiState", new object[]{});
+          _node.Rpc.Invoke(_target.State.Edge, q, "ncserver.EchoVivaldiState", new object[]{});
         } catch(Exception) {}
       }
       
@@ -330,7 +330,7 @@ namespace Brunet.Services.Coordinate {
         };
         
         try {
-          _node.Rpc.Invoke(_target, q, "ncserver.Echo", new object[]{});
+          _node.Rpc.Invoke(_target.State.Edge, q, "ncserver.Echo", new object[]{});
         } catch (Exception) {}
       }
     }

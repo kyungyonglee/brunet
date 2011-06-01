@@ -17,6 +17,6 @@ Global
 		{FB45E7FA-731D-4C23-B792-6F569B74F49C}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = acisp2p.simulator.csproj
+		StartupItem = acisp2p.csproj
 	EndGlobalSection
 EndGlobal

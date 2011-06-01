@@ -465,7 +465,7 @@ namespace Brunet.Symphony
           }
         };
         stat_res.CloseEvent += handle_result;
-        _rpc.Invoke(c, stat_res, "sys:link.GetStatus", req.ToDictionary() );
+        _rpc.Invoke(c.State.Edge, stat_res, "sys:link.GetStatus", req.ToDictionary() );
       }
     }
     /**

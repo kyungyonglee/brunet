@@ -71,7 +71,7 @@ namespace Brunet.Connections {
 #if BRUNET_NUNIT
   [TestFixture]
 #endif
-  public class Connection : Brunet.Messaging.ISender {
+  public class Connection{
 #if BRUNET_NUNIT
     //NUnit needs a default constructor
     public Connection() { }
@@ -264,10 +264,6 @@ namespace Brunet.Connections {
       return result;
     }
 
-    public void Send(Brunet.Util.ICopyable data) {
-      State.Edge.Send(data);
-    }
- 
     /** Return a version of the Dictionary suitable for ADR use
      * maps:
      * "address" => Address.ToString()

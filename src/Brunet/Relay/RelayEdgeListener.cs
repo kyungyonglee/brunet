@@ -488,7 +488,7 @@ namespace Brunet.Relay {
         sender.Send(new CopyList(PType.Protocol.Relaying, te.MId, data));
       } else {
         try {
-          forwarder.Send(new CopyList(te.Header, te.MId, data));
+          forwarder.State.Edge.Send(new CopyList(te.Header, te.MId, data));
         } catch {
           // We could be sending aon a closed edge... we could deal with this
           // better, but let's just let the system take its natural course.
